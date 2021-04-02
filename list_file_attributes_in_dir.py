@@ -157,7 +157,7 @@ def write_attribute_dicts_to_csv(attribute_dicts: typing.List[typing.Dict[str, t
 
 
 # MARK: - Main
-def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
+def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, processes: int):
     # 1. Verify parameters.
     if not attribute_keys:
         print(f"No designated attribute keys. Nothing to do.")
@@ -181,10 +181,11 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
     #     print(f)
 
     # 3. Calculate file attributes.
-    attribute_dicts = []
-
-    with multiprocessing.Pool() as pool:
-        attribute_dicts = pool.starmap(_calculate_file_attributes_worker, [(filename, attribute_keys) for filename in file_and_dir_names])
+    if (processes > 1):
+        with multiprocessing.Pool(processes=processes) as pool:
+            attribute_dicts = pool.starmap(_calculate_file_attributes_worker, [(filename, attribute_keys) for filename in file_and_dir_names])
+    else:
+        attribute_dicts = [_calculate_file_attributes_worker(filename, attribute_keys) for filename in file_and_dir_names]
 
     # for d in attribute_dicts:
     #     print(d)
@@ -203,7 +204,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("dir_name", nargs="?", default=os.getcwd())
     parser.add_argument("--attributes", "-a", nargs="*", default=[AttributeKeys.SIZE, AttributeKeys.SHA_256_HASH])
-    parser.add_argument("--csv_filename", "-o", default="file_attributes.csv")
+    parser.add_argument("--csv_filename", "-o", type=str, default="file_attributes.csv")
+    parser.add_argument("--processes", "-p", type=int, default=1)
     args = parser.parse_args()
 
-    main(args.dir_name, args.attributes, args.csv_filename)
+    main(args.dir_name, args.attributes, args.csv_filename, args.processes)
