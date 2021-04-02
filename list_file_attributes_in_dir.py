@@ -3,6 +3,7 @@ import argparse
 import typing
 import multiprocessing
 from collections import defaultdict
+import csv
 
 import sha_hash
 
@@ -113,7 +114,7 @@ def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typi
 
     :param attribute_dicts:
     :param attribute_keys:
-    :return:
+    :return: None
     """
     if AttributeKeys.SIZE in attribute_keys:
         size_cache = defaultdict(int)
@@ -145,9 +146,19 @@ def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typi
             size_cache[parent_dir] += d[AttributeKeys.SIZE]
 
 
+# MARK: - CSV
+def write_attribute_dicts_to_csv(attribute_dicts: typing.List[typing.Dict[str, typing.Any]], attribute_keys: typing.List[str], csv_filename: str):
+    with open(csv_filename, "w") as f:    # Default encoding is UTF-8 (even if there are only ASCII characters)
+        fieldnames = [AttributeKeys.FILENAME] + attribute_keys
+        writer = csv.DictWriter(f, fieldnames)
+
+        writer.writeheader()
+        writer.writerows(attribute_dicts)
+
+
 # MARK: - Main
 def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
-    # 1. Verify attribute keys.
+    # 1. Verify parameters.
     if not attribute_keys:
         print(f"No designated attribute keys. Nothing to do.")
         return
@@ -160,6 +171,9 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
         # Filename is a special key and always appear first in the attribute dicts.
         # It should not be specified in the command line arguments.
         attribute_keys.remove(AttributeKeys.FILENAME)
+
+    if (os.path.exists(csv_filename)):
+        raise ValueError(f"CSV file `{csv_filename}` exists!")
 
     # 2. Get file and dir names.
     file_and_dir_names = get_all_file_and_dir_names(start_path)
@@ -178,10 +192,11 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
     # 4. Calculate dir attributes.
     _calculate_dir_attributes(attribute_dicts, attribute_keys)
 
-    for d in attribute_dicts:
-        print(d)
+    # for d in attribute_dicts:
+    #     print(d)
 
-    # TODO: 5. Save to csv.
+    # 5. Save to csv.
+    write_attribute_dicts_to_csv(attribute_dicts, attribute_keys, csv_filename)
 
 
 if __name__ == '__main__':
