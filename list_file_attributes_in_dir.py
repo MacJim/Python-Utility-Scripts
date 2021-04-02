@@ -2,6 +2,7 @@ import os
 import argparse
 import typing
 import multiprocessing
+from collections import defaultdict
 
 import sha_hash
 
@@ -67,7 +68,16 @@ class AttributeKeys:
 HASH_FILE_SIZE_THRESHOLD = 65536
 
 
-def _calculate_attributes_worker(filename: str, attribute_keys: typing.List[str]) -> typing.Dict[str, typing.Any]:
+def _calculate_file_attributes_worker(filename: str, attribute_keys: typing.List[str]) -> typing.Dict[str, typing.Any]:
+    """
+    Calculate file attributes.
+
+    Directory names are included in the returned dictionary, but their other attributes are not.
+
+    :param filename:
+    :param attribute_keys: A list of `AttributeKeys` constants specifying the attributes to calculate.
+    :return:
+    """
     return_value = {AttributeKeys.FILENAME: filename}
 
     if (not os.path.isfile(filename)):
@@ -95,6 +105,46 @@ def _calculate_attributes_worker(filename: str, attribute_keys: typing.List[str]
     return return_value
 
 
+def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typing.Any]], attribute_keys: typing.List[str]):
+    """
+    Select directories from `attribute_dicts` and update their attributes according to the files they contain.
+
+    Currently this function simply adds up the size of files in directories.
+
+    :param attribute_dicts:
+    :param attribute_keys:
+    :return:
+    """
+    if AttributeKeys.SIZE in attribute_keys:
+        size_cache = defaultdict(int)
+
+        # Iterate in reversed order because sub-directories/files always appear after parents.
+        for d in reversed(attribute_dicts):
+            filename: str = d[AttributeKeys.FILENAME]
+            if (filename.endswith(os.sep)):
+                # This is a dir.
+                if filename[:-1] in size_cache:
+                    # `size_cache` entries don't have the ending `os.sep`.
+                    d[AttributeKeys.SIZE] = size_cache[filename[:-1]]
+                    del size_cache[filename[:-1]]
+                elif filename in size_cache:
+                    # Just in case. Should never get executed.
+                    d[AttributeKeys.SIZE] = size_cache[filename]
+                    del size_cache[filename]
+                else:
+                    # Empty dir.
+                    d[AttributeKeys.SIZE] = 0
+
+                parent_dir = os.path.dirname(filename[:-1])    # We must remove the final `os.sep`. Otherwise, `parent_dir` will be the dir as `filename`.
+
+            else:
+                # This is a file.
+                parent_dir = os.path.dirname(filename)
+
+            # Add current size to parent's size in `size_cache`.
+            size_cache[parent_dir] += d[AttributeKeys.SIZE]
+
+
 # MARK: - Main
 def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
     # 1. Verify attribute keys.
@@ -116,16 +166,22 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str):
     # for f in file_and_dir_names:
     #     print(f)
 
-    # 3. Calculate attributes.
+    # 3. Calculate file attributes.
     attribute_dicts = []
 
     with multiprocessing.Pool() as pool:
-        attribute_dicts = pool.starmap(_calculate_attributes_worker, [(filename, attribute_keys) for filename in file_and_dir_names])
+        attribute_dicts = pool.starmap(_calculate_file_attributes_worker, [(filename, attribute_keys) for filename in file_and_dir_names])
+
+    # for d in attribute_dicts:
+    #     print(d)
+
+    # 4. Calculate dir attributes.
+    _calculate_dir_attributes(attribute_dicts, attribute_keys)
 
     for d in attribute_dicts:
         print(d)
 
-    # TODO: 4. Save to csv.
+    # TODO: 5. Save to csv.
 
 
 if __name__ == '__main__':
