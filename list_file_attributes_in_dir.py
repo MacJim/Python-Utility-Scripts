@@ -62,7 +62,10 @@ def get_all_file_and_dir_names(start_path: str, path_format=PathFormat.UNMODIFIE
     return_value = []
 
     for root_path, dir_names, filenames in os.walk(start_path):
-        return_value.append(root_path + os.sep)
+        if not root_path.endswith(os.sep):
+            root_path += os.sep
+
+        return_value.append(root_path)
 
         dir_names.sort()
         filenames.sort()
