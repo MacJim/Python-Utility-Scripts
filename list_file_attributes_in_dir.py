@@ -4,6 +4,7 @@ import typing
 import multiprocessing
 from collections import defaultdict
 import csv
+import enum
 
 import sha_hash
 
@@ -35,15 +36,29 @@ import sha_hash
 
 
 # MARK: - Get filenames and dir names
-def get_all_file_and_dir_names(start_path: str) -> typing.List[str]:
+class PathFormat (enum.Enum):
+    UNMODIFIED = "unmodified"
+
+    ABSOLUTE = "absolute"
+    RELATIVE = "relative"
+
+
+def get_all_file_and_dir_names(start_path: str, path_format=PathFormat.UNMODIFIED) -> typing.List[str]:
     """
     Get all filenames and dir names.
 
     Dir names end with `os.sep` to make them distinguishable.
 
     :param start_path:
+    :param path_format:
     :return:
     """
+    if path_format == PathFormat.ABSOLUTE:
+        start_path = os.path.abspath(start_path)
+    elif path_format == PathFormat.RELATIVE:
+        os.chdir(os.path.dirname(os.path.abspath(start_path)))
+        start_path = os.path.basename(start_path)
+
     return_value = []
 
     for root_path, dir_names, filenames in os.walk(start_path):
@@ -157,7 +172,7 @@ def write_attribute_dicts_to_csv(attribute_dicts: typing.List[typing.Dict[str, t
 
 
 # MARK: - Main
-def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, processes: int):
+def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, processes: int, path_format: PathFormat):
     # 1. Verify parameters.
     if not attribute_keys:
         print(f"No designated attribute keys. Nothing to do.")
@@ -172,11 +187,12 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, p
         # It should not be specified in the command line arguments.
         attribute_keys.remove(AttributeKeys.FILENAME)
 
+    csv_filename = os.path.abspath(csv_filename)    # The `get_all_file_and_dir_names` may change the working directory if `path_format` is `RELATIVE`.
     if (os.path.exists(csv_filename)):
         raise ValueError(f"CSV file `{csv_filename}` exists!")
 
     # 2. Get file and dir names.
-    file_and_dir_names = get_all_file_and_dir_names(start_path)
+    file_and_dir_names = get_all_file_and_dir_names(start_path, path_format=path_format)
     # for f in file_and_dir_names:
     #     print(f)
 
@@ -201,11 +217,12 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, p
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("dir_name", nargs="?", default=os.getcwd())
-    parser.add_argument("--attributes", "-a", nargs="*", default=[AttributeKeys.SIZE, AttributeKeys.SHA_256_HASH])
-    parser.add_argument("--csv_filename", "-o", type=str, default="file_attributes.csv")
-    parser.add_argument("--processes", "-p", type=int, default=1)
+    parser = argparse.ArgumentParser(description="List file attributes recursively in the specified directory.")
+    parser.add_argument("dir_name", nargs="?", default=os.getcwd(), help="The root directory name. Defaults to the current working dir (%(default)s).")
+    parser.add_argument("--attributes", "-a", nargs="*", default=[AttributeKeys.SIZE, AttributeKeys.SHA_256_HASH], help="Attributes to include in the output file. (default: %(default)s)")
+    parser.add_argument("--csv_filename", "-o", type=str, default="file_attributes.csv", help="The output filename. (default: %(default)s)")
+    parser.add_argument("--processes", "-p", type=int, default=1, help="`multiprocessing` process count. By default this script does not use multiple processes, which is sufficient for most cases.")
+    parser.add_argument("--path_format", "-f", type=str, default=PathFormat.UNMODIFIED.value, help=f"File/dir name format in the output file. Possible values: {PathFormat.UNMODIFIED.value}, {PathFormat.ABSOLUTE.value}, {PathFormat.RELATIVE.value}. (default: %(default)s)")
     args = parser.parse_args()
 
-    main(args.dir_name, args.attributes, args.csv_filename, args.processes)
+    main(args.dir_name, args.attributes, args.csv_filename, args.processes, PathFormat(args.path_format))
