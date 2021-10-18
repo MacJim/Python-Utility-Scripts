@@ -110,7 +110,7 @@ def main(input_filename: typing.Optional[str], copy_to_clipboard: bool):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_filename", "-f", type=str, default="/tmp/1.txt")
+    parser.add_argument("--input_filename", "-f", type=str, default=None)
     parser.add_argument("--copy_to_clipboard", "-c", action="store_true")
     args = parser.parse_args()
 
