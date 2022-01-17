@@ -2,8 +2,8 @@
 https://docs.python.org/3/library/os.html#os.walk
 """
 
-import os
 import argparse
+import os
 
 
 def list_files(start_path: str):

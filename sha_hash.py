@@ -1,8 +1,8 @@
 # Get a file's SHA1 hash.
 
 import argparse
-import hashlib
 import enum
+import hashlib
 
 
 # MARK: - Hash Types

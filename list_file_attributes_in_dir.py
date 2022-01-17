@@ -1,13 +1,12 @@
-import os
 import argparse
-import typing
-import multiprocessing
-from collections import defaultdict
 import csv
 import enum
+import multiprocessing
+import os
+import typing
+from collections import defaultdict
 
 import sha_hash
-
 
 # def _calculate_file_sizes_recursively(start_path: str) -> int:
 #     # 1. Separate dir names from filenames.
