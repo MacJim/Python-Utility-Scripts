@@ -8,7 +8,9 @@ from PIL import Image
 OLD_EXTENSION: typing.Final = ".old"
 
 
-def get_image_filenames(src_dir: str, image_extensions: typing.List[str]) -> typing.List[str]:
+def get_image_filenames(
+    src_dir: str, image_extensions: typing.List[str]
+) -> typing.List[str]:
     return_value = []
 
     for current_dir, dir_names, filenames in os.walk(src_dir):
@@ -34,7 +36,12 @@ def convert_image_to_webp(src_filename: str, dest_filename: str):
     src_image.save(dest_filename, lossless=True, quality=100, method=6)
 
 
-def main(src_dir: str, assume_yes: bool, input_extensions: typing.List[str], output_extension: str):
+def main(
+    src_dir: str,
+    assume_yes: bool,
+    input_extensions: typing.List[str],
+    output_extension: str,
+):
     # Check input directory.
     print(f"Using source dir `{src_dir}`.")
     if not os.path.isdir(src_dir):
@@ -61,7 +68,10 @@ def main(src_dir: str, assume_yes: bool, input_extensions: typing.List[str], out
             exit(2)
 
     # Get target files.
-    source_and_target_filenames = ((filename, _get_dest_filename(filename, output_extension)) for filename in image_filenames)
+    source_and_target_filenames = (
+        (filename, _get_dest_filename(filename, output_extension))
+        for filename in image_filenames
+    )
     for src_filename, dest_filename in source_and_target_filenames:
         if os.path.exists(dest_filename):
             print(f"Destination file `{dest_filename}` exists. Aborted.")
