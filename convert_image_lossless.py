@@ -111,12 +111,38 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--src_dir", "-s", type=str, default=os.getcwd())
-    parser.add_argument("--dest_dir", "-d", type=str, default=None)
-    parser.add_argument("--input_extensions", nargs="+", default=["png"])
-    parser.add_argument("--output_extension", type=str, default="webp")
-    parser.add_argument("--assume_yes", "-y", action="store_true")
-    parser.add_argument("--rename_src", "-r", action="store_true")
+    parser.add_argument(
+        "--src_dir",
+        "-s",
+        type=str,
+        default=os.getcwd(),
+        help=f"Source images dir. Default: %(default)s",
+    )
+    parser.add_argument(
+        "--dest_dir",
+        "-d",
+        type=str,
+        default=None,
+        help="Destination dir. If `None`, will use `src_dir`. Default: %(default)s",
+    )
+    parser.add_argument(
+        "--input_extensions", nargs="+", default=["png"], help=f"Default: %(default)s"
+    )
+    parser.add_argument(
+        "--output_extension", type=str, default="webp", help=f"Default: %(default)s"
+    )
+    parser.add_argument(
+        "--assume_yes",
+        "-y",
+        action="store_true",
+        help="If set, don't ask for user confirmation.",
+    )
+    parser.add_argument(
+        "--rename_src",
+        "-r",
+        action="store_true",
+        help=f"If set, add `{OLD_EXTENSION}` to all converted source files.",
+    )
     args = parser.parse_args()
 
     main(
