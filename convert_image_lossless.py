@@ -1,6 +1,7 @@
 import argparse
 import os
 import typing
+import multiprocessing
 
 from PIL import Image
 
@@ -8,6 +9,7 @@ from PIL import Image
 OLD_EXTENSION: typing.Final = ".old"
 
 
+# MARK: Filename/path helpers
 def get_image_filenames_in_dir(
     src_dir: str, image_extensions: typing.List[str]
 ) -> typing.List[str]:
@@ -30,6 +32,20 @@ def _get_dest_filename(filename: str, dest_extension: str, dest_dir: str):
     return filename
 
 
+# MARK: Image conversion helpers
+def convert_image_worker(src_filename: str, dest_filename: str, rename_src: bool):
+    if os.path.exists(dest_filename):
+        print(f"Destination file `{dest_filename}` exists. Skipping.")
+        return
+
+    print(f"Converting `{src_filename}` to `{dest_filename}`...")
+    # TODO: Support more output formats.
+    convert_image_to_webp(src_filename, dest_filename)
+
+    if rename_src:
+        os.rename(src_filename, src_filename + OLD_EXTENSION)
+
+
 def convert_image_to_webp(src_filename: str, dest_filename: str):
     if not dest_filename.endswith(".webp"):
         raise NotImplementedError("Extension must be webp.")
@@ -45,6 +61,7 @@ def main(
     output_extension: str,
     assume_yes: bool,
     rename_src: bool,
+    processes: int | None,
 ):
     # Check directories.
     print(f"Using source dir `{src_dir}`.")
@@ -97,16 +114,19 @@ def main(
             exit(2)
 
     # Convert.
-    for src_filename, dest_filename in source_and_target_filenames:
-        if os.path.exists(dest_filename):
-            print(f"Destination file `{dest_filename}` exists. Skipping.")
-            continue
+    if processes == 0:
+        for src_filename, dest_filename in source_and_target_filenames:
+            convert_image_worker(src_filename, dest_filename, rename_src)
 
-        print(f"Converting `{src_filename}` to `{dest_filename}`...")
-        convert_image_to_webp(src_filename, dest_filename)
-
-        if rename_src:
-            os.rename(src_filename, src_filename + OLD_EXTENSION)
+    else:
+        with multiprocessing.Pool(processes) as pool:
+            pool.starmap(
+                convert_image_worker,
+                (
+                    (src_filename, dest_filename, rename_src)
+                    for src_filename, dest_filename in source_and_target_filenames
+                )
+            )
 
 
 if __name__ == "__main__":
@@ -143,6 +163,16 @@ if __name__ == "__main__":
         action="store_true",
         help=f"If set, add `{OLD_EXTENSION}` to all converted source files.",
     )
+    parser.add_argument(
+        "--processes",
+        "-p",
+        type=int,
+        default=None,
+        help=f"Amount of `multiprocessing` processes to use. "
+             f"Uses `os.cpu_count()` ({os.cpu_count()}) if `None`; "
+             f"Doesn't use `multiprocessing` if 0. "
+             f"Default: %(default)s",
+    )
     args = parser.parse_args()
 
     main(
@@ -152,4 +182,5 @@ if __name__ == "__main__":
         args.output_extension,
         args.assume_yes,
         args.rename_src,
+        args.processes,
     )
