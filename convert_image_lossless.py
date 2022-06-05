@@ -8,7 +8,7 @@ from PIL import Image
 OLD_EXTENSION: typing.Final = ".old"
 
 
-def get_image_filenames(
+def get_image_filenames_in_dir(
     src_dir: str, image_extensions: typing.List[str]
 ) -> typing.List[str]:
     return_value = []
@@ -52,7 +52,7 @@ def main(
     output_extension = "." + output_extension
 
     # List files to convert.
-    image_filenames = get_image_filenames(src_dir, input_extensions)
+    image_filenames = get_image_filenames_in_dir(src_dir, input_extensions)
     if not image_filenames:
         print("No file to convert.")
         exit(0)
