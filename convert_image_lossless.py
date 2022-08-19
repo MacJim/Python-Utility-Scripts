@@ -51,7 +51,7 @@ def convert_image_to_webp(src_filename: str, dest_filename: str):
         raise NotImplementedError("Extension must be webp.")
 
     src_image: Image.Image = Image.open(src_filename)
-    src_image.save(dest_filename, lossless=True, quality=100, method=6)
+    src_image.save(dest_filename, lossless=True, quality=100, method=6)  # TODO: ICC Profile
 
 
 def main(
