@@ -35,14 +35,16 @@ import sha_hash
 
 
 # MARK: - Get filenames and dir names
-class PathFormat (enum.Enum):
+class PathFormat(enum.Enum):
     UNMODIFIED = "unmodified"
 
     ABSOLUTE = "absolute"
     RELATIVE = "relative"
 
 
-def get_all_file_and_dir_names(start_path: str, path_format=PathFormat.UNMODIFIED) -> typing.List[str]:
+def get_all_file_and_dir_names(
+    start_path: str, path_format=PathFormat.UNMODIFIED
+) -> typing.List[str]:
     """
     Get all filenames and dir names.
 
@@ -86,7 +88,9 @@ class AttributeKeys:
 HASH_FILE_SIZE_THRESHOLD = 65536
 
 
-def _calculate_file_attributes_worker(filename: str, attribute_keys: typing.List[str]) -> typing.Dict[str, typing.Any]:
+def _calculate_file_attributes_worker(
+    filename: str, attribute_keys: typing.List[str]
+) -> typing.Dict[str, typing.Any]:
     """
     Calculate file attributes.
 
@@ -98,7 +102,7 @@ def _calculate_file_attributes_worker(filename: str, attribute_keys: typing.List
     """
     return_value = {AttributeKeys.FILENAME: filename}
 
-    if (not os.path.isfile(filename)):
+    if not os.path.isfile(filename):
         # This is a folder.
         # Return an empty dict because we can only calculate its info after calculating its files.
         # raise ValueError(f"`{filename}` is not a file!")
@@ -106,7 +110,9 @@ def _calculate_file_attributes_worker(filename: str, attribute_keys: typing.List
 
     # Calculate size.
     # This is also the prerequisite for has functions.
-    if ((AttributeKeys.SIZE in attribute_keys) or (AttributeKeys.SHA_256_HASH in attribute_keys)):
+    if (AttributeKeys.SIZE in attribute_keys) or (
+        AttributeKeys.SHA_256_HASH in attribute_keys
+    ):
         file_size = os.path.getsize(filename)
 
     # Size.
@@ -116,14 +122,23 @@ def _calculate_file_attributes_worker(filename: str, attribute_keys: typing.List
     # Hash.
     if AttributeKeys.SHA_256_HASH in attribute_keys:
         if file_size > HASH_FILE_SIZE_THRESHOLD:
-            return_value[AttributeKeys.SHA_256_HASH] = sha_hash.get_sha_hash_of_big_file(filename, sha_hash.HashAlgorithm.SHA256)
+            return_value[
+                AttributeKeys.SHA_256_HASH
+            ] = sha_hash.get_sha_hash_of_big_file(
+                filename, sha_hash.HashAlgorithm.SHA256
+            )
         else:
-            return_value[AttributeKeys.SHA_256_HASH] = sha_hash.get_sha_hash_of_file(filename, sha_hash.HashAlgorithm.SHA256)
+            return_value[AttributeKeys.SHA_256_HASH] = sha_hash.get_sha_hash_of_file(
+                filename, sha_hash.HashAlgorithm.SHA256
+            )
 
     return return_value
 
 
-def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typing.Any]], attribute_keys: typing.List[str]):
+def _calculate_dir_attributes(
+    attribute_dicts: typing.List[typing.Dict[str, typing.Any]],
+    attribute_keys: typing.List[str],
+):
     """
     Select directories from `attribute_dicts` and update their attributes according to the files they contain.
 
@@ -139,7 +154,7 @@ def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typi
         # Iterate in reversed order because sub-directories/files always appear after parents.
         for d in reversed(attribute_dicts):
             filename: str = d[AttributeKeys.FILENAME]
-            if (filename.endswith(os.sep)):
+            if filename.endswith(os.sep):
                 # This is a dir.
                 if filename[:-1] in size_cache:
                     # `size_cache` entries don't have the ending `os.sep`.
@@ -153,7 +168,9 @@ def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typi
                     # Empty dir.
                     d[AttributeKeys.SIZE] = 0
 
-                parent_dir = os.path.dirname(filename[:-1])    # We must remove the final `os.sep`. Otherwise, `parent_dir` will be the dir as `filename`.
+                parent_dir = os.path.dirname(
+                    filename[:-1]
+                )  # We must remove the final `os.sep`. Otherwise, `parent_dir` will be the dir as `filename`.
 
             else:
                 # This is a file.
@@ -164,8 +181,12 @@ def _calculate_dir_attributes(attribute_dicts: typing.List[typing.Dict[str, typi
 
 
 # MARK: - CSV
-def write_attribute_dicts_to_csv(attribute_dicts: typing.List[typing.Dict[str, typing.Any]], attribute_keys: typing.List[str], csv_filename: str):
-    with open(csv_filename, "w") as f:    # Default encoding is UTF-8 (even if there are only ASCII characters)
+def write_attribute_dicts_to_csv(
+    attribute_dicts: typing.List[typing.Dict[str, typing.Any]],
+    attribute_keys: typing.List[str],
+    csv_filename: str,
+):
+    with open(csv_filename, "w") as f:  # Default encoding is UTF-8
         fieldnames = [AttributeKeys.FILENAME] + attribute_keys
         writer = csv.DictWriter(f, fieldnames)
 
@@ -174,14 +195,20 @@ def write_attribute_dicts_to_csv(attribute_dicts: typing.List[typing.Dict[str, t
 
 
 # MARK: - Main
-def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, processes: int, path_format: PathFormat):
+def main(
+    start_path: str,
+    attribute_keys: typing.List[str],
+    csv_filename: str,
+    processes: int,
+    path_format: PathFormat,
+):
     # 1. Verify parameters.
     if not attribute_keys:
         print(f"No designated attribute keys. Nothing to do.")
         return
 
     for key in attribute_keys:
-        if ((key != AttributeKeys.SIZE) and (key != AttributeKeys.SHA_256_HASH)):
+        if (key != AttributeKeys.SIZE) and (key != AttributeKeys.SHA_256_HASH):
             raise ValueError(f"Invalid attribute key `{key}`.")
 
     if AttributeKeys.FILENAME in attribute_keys:
@@ -189,8 +216,10 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, p
         # It should not be specified in the command line arguments.
         attribute_keys.remove(AttributeKeys.FILENAME)
 
-    csv_filename = os.path.abspath(csv_filename)    # The `get_all_file_and_dir_names` may change the working directory if `path_format` is `RELATIVE`.
-    if (os.path.exists(csv_filename)):
+    csv_filename = os.path.abspath(
+        csv_filename
+    )  # The `get_all_file_and_dir_names` may change the working directory if `path_format` is `RELATIVE`.
+    if os.path.exists(csv_filename):
         raise ValueError(f"CSV file `{csv_filename}` exists!")
 
     # 2. Get file and dir names.
@@ -199,11 +228,17 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, p
     #     print(f)
 
     # 3. Calculate file attributes.
-    if (processes > 1):
+    if processes > 1:
         with multiprocessing.Pool(processes=processes) as pool:
-            attribute_dicts = pool.starmap(_calculate_file_attributes_worker, [(filename, attribute_keys) for filename in file_and_dir_names])
+            attribute_dicts = pool.starmap(
+                _calculate_file_attributes_worker,
+                [(filename, attribute_keys) for filename in file_and_dir_names],
+            )
     else:
-        attribute_dicts = [_calculate_file_attributes_worker(filename, attribute_keys) for filename in file_and_dir_names]
+        attribute_dicts = [
+            _calculate_file_attributes_worker(filename, attribute_keys)
+            for filename in file_and_dir_names
+        ]
 
     # for d in attribute_dicts:
     #     print(d)
@@ -218,13 +253,50 @@ def main(start_path: str, attribute_keys: typing.List[str], csv_filename: str, p
     write_attribute_dicts_to_csv(attribute_dicts, attribute_keys, csv_filename)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="List file attributes recursively in the specified directory.")
-    parser.add_argument("dir_name", nargs="?", default=os.getcwd(), help="The root directory name. Defaults to the current working dir (%(default)s).")
-    parser.add_argument("--attributes", "-a", nargs="*", default=[AttributeKeys.SIZE, AttributeKeys.SHA_256_HASH], help="Attributes to include in the output file. (default: %(default)s)")
-    parser.add_argument("--csv_filename", "-o", type=str, default="file_attributes.csv", help="The output filename. (default: %(default)s)")
-    parser.add_argument("--processes", "-p", type=int, default=1, help="`multiprocessing` process count. By default this script does not use multiple processes, which is sufficient for most cases.")
-    parser.add_argument("--path_format", "-f", type=str, default=PathFormat.UNMODIFIED.value, help=f"File/dir name format in the output file. Possible values: {PathFormat.UNMODIFIED.value}, {PathFormat.ABSOLUTE.value}, {PathFormat.RELATIVE.value}. (default: %(default)s)")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="List file attributes recursively in the specified directory."
+    )
+    parser.add_argument(
+        "dir_name",
+        nargs="?",
+        default=os.getcwd(),
+        help="The root directory name. Defaults to the current working dir (%(default)s).",
+    )
+    parser.add_argument(
+        "--attributes",
+        "-a",
+        nargs="*",
+        default=[AttributeKeys.SIZE, AttributeKeys.SHA_256_HASH],
+        help="Attributes to include in the output file. (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--csv_filename",
+        "-o",
+        type=str,
+        default="file_attributes.csv",
+        help="The output filename. (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--processes",
+        "-p",
+        type=int,
+        default=1,
+        help="`multiprocessing` process count. By default this script does not use multiple processes, which is sufficient for most cases.",
+    )
+    parser.add_argument(
+        "--path_format",
+        "-f",
+        type=str,
+        default=PathFormat.UNMODIFIED.value,
+        help=f"File/dir name format in the output file. Possible values: {PathFormat.UNMODIFIED.value}, {PathFormat.ABSOLUTE.value}, {PathFormat.RELATIVE.value}. (default: %(default)s)",
+    )
     args = parser.parse_args()
 
-    main(args.dir_name, args.attributes, args.csv_filename, args.processes, PathFormat(args.path_format))
+    main(
+        args.dir_name,
+        args.attributes,
+        args.csv_filename,
+        args.processes,
+        PathFormat(args.path_format),
+    )
