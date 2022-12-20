@@ -84,6 +84,8 @@ class AttributeKeys:
     SIZE = "size"
     SHA_256_HASH = "sha256"
 
+    ALL_KEYS = {SIZE, SHA_256_HASH}
+
 
 HASH_FILE_SIZE_THRESHOLD = 65536
 
@@ -142,7 +144,7 @@ def _calculate_dir_attributes(
     """
     Select directories from `attribute_dicts` and update their attributes according to the files they contain.
 
-    Currently this function simply adds up the size of files in directories.
+    Currently, this function simply adds up the size of files in directories.
 
     :param attribute_dicts:
     :param attribute_keys:
@@ -207,20 +209,20 @@ def main(
         print(f"No designated attribute keys. Nothing to do.")
         return
 
-    for key in attribute_keys:
-        if (key != AttributeKeys.SIZE) and (key != AttributeKeys.SHA_256_HASH):
-            raise ValueError(f"Invalid attribute key `{key}`.")
-
     if AttributeKeys.FILENAME in attribute_keys:
         # Filename is a special key and always appear first in the attribute dicts.
         # It should not be specified in the command line arguments.
         attribute_keys.remove(AttributeKeys.FILENAME)
 
+    for key in attribute_keys:
+        if key not in AttributeKeys.ALL_KEYS:
+            raise ValueError(f"Invalid attribute key `{key}`.")
+
     csv_filename = os.path.abspath(
         csv_filename
     )  # The `get_all_file_and_dir_names` may change the working directory if `path_format` is `RELATIVE`.
     if os.path.exists(csv_filename):
-        raise ValueError(f"CSV file `{csv_filename}` exists!")
+        raise FileExistsError(f"CSV file `{csv_filename}` exists!")
 
     # 2. Get file and dir names.
     file_and_dir_names = get_all_file_and_dir_names(start_path, path_format=path_format)
