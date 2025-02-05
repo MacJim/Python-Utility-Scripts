@@ -18,14 +18,14 @@ def main(work_dir: str, old_ext: str | None, new_ext: str | None):
     print(f"Old extension: {old_ext if old_ext else '(empty, add extension to files without an extension)'}")
     print(f"New extension: {new_ext if new_ext else '(empty, remove extension)'}")
 
-    filenames = os.listdir(work_dir)
-    filenames = [f for f in filenames if os.path.isfile(os.path.join(work_dir, f))]  # NOTE: Ignore dirs.
+    filenames_old = os.listdir(work_dir)
+    filenames_old = [f for f in filenames_old if os.path.isfile(os.path.join(work_dir, f))]  # NOTE: Ignore dirs.
 
     # FIXME: Handle filenames that that start with `.`
     if old_ext:
-        filenames_old = [f for f in filenames if f.endswith(old_ext)]
+        filenames_old = [f for f in filenames_old if f.endswith(old_ext)]
     else:
-        filenames_old = [f for f in filenames if "." not in f]
+        filenames_old = [f for f in filenames_old if "." not in f]
 
     if not filenames_old:
         print("No file matches the old extension. Nothing to do.")
@@ -38,20 +38,29 @@ def main(work_dir: str, old_ext: str | None, new_ext: str | None):
     else:
         filenames_new = [f + (new_ext if new_ext else "") for f in filenames_old]
 
-    print(f"{len(filenames_old)} files to rename:")
-    for old_filename, new_filename in zip(filenames_old, filenames_new):
-        print(f"{old_filename} -> {new_filename}")
+    filenames = [
+        (os.path.join(work_dir, old), os.path.join(work_dir, new))
+        for old, new in zip(filenames_old, filenames_new)
+    ]
+    ignored_filenames = [(old, new) for old, new in filenames if os.path.exists(new)]
+    filenames = [(old, new) for old, new in filenames if not os.path.exists(new)]
+
+    print(f"{len(filenames)} files to rename:")
+    for old, new in filenames:
+        print(f"{old} -> {new}")
+
+    if ignored_filenames:
+        print(f"{len(ignored_filenames)} files ignored due to existing target:")
+        for old, new in ignored_filenames:
+            print(f"{old} -> {new}")
 
     consent = input("Proceed? (y/n) ")
     if consent.lower() != "y":
         print("Aborted.")
         exit(2)
 
-    for old_filename, new_filename in zip(filenames_old, filenames_new):
-        old_filename = os.path.join(work_dir, old_filename)
-        new_filename = os.path.join(work_dir, new_filename)
-
-        os.rename(old_filename, new_filename)
+    for old, new in filenames:
+        os.rename(old, new)
 
 
 if __name__ == "__main__":
