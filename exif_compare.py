@@ -4,9 +4,9 @@
 """
 
 import argparse
+import json
 import os
 import subprocess
-import json
 from collections import defaultdict
 
 
@@ -18,7 +18,7 @@ METADATA_ABSENT_KEY = "(Absent)"
 def run_exiftool(filename: str) -> dict:
     cmd = ["exiftool", "-j", filename]
     # FIXME: 1 call per file might be slow; Can I call `exiftool` once on all files?
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode:
         raise RuntimeError(f"exiftool failed on `{filename}` with code {result.returncode}")
     ret = json.loads(result.stdout)
