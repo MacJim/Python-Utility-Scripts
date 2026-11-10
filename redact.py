@@ -6,7 +6,7 @@ import string
 
 
 PRESERVED_CHARS = frozenset(string.punctuation + string.whitespace)
-REPLACEMENT_CHAR = 'x'
+REPLACEMENT_CHAR = "x"
 
 
 def redact(text: str) -> str:
