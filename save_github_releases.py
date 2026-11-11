@@ -165,8 +165,10 @@ def main(repo: str, count: int = 10, output_dir: str | Path = ".") -> int:
         raise ValueError(f"Release count must be between 1 and {MAX_RELEASES}; only one page is supported.")
 
     output_dir = Path(output_dir).expanduser()
+    if not output_dir.is_dir():
+        print_color("ERROR", f"Output directory `{output_dir}` doesn't exist.")
+        return 1
     try:
-        output_dir.mkdir(parents=True, exist_ok=True)
         releases = fetch_releases(repo, count)
     except (OSError, RuntimeError) as error:
         print_color("ERROR", str(error))
@@ -190,7 +192,7 @@ def cli():
     )
     parser.add_argument("repo", help="GitHub repository in username/project form")
     parser.add_argument("-n", "--count", type=int, default=10, help=f"number of releases, 1 ~ {MAX_RELEASES} (default: %(default)s)")
-    parser.add_argument("-o", "--output-dir", type=Path, default=Path("."), help="output directory; created if missing (default: current directory)")
+    parser.add_argument("-o", "--output-dir", type=Path, default=Path("."), help="(existing) output directory (default: current directory)")
     args = parser.parse_args()
     try:
         status = main(args.repo, args.count, args.output_dir)

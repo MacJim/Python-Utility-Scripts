@@ -137,12 +137,17 @@ class SaveGitHubReleasesTest(unittest.TestCase):
         self.assertEqual({path.name for path in self.output_dir.iterdir()}, {"v2.0.md", "v2.0.json"})
         self.assertIn("[ERROR]", self.stderr.getvalue())
 
-    def test_output_directory_is_created_and_empty_response_succeeds(self):
+    def test_existing_output_directory_and_empty_response_succeed(self):
+        self.assertEqual(self.run_main([]), 0)
+        self.assertEqual(list(self.output_dir.iterdir()), [])
+
+    def test_missing_output_directory_fails_before_fetching_and_is_not_created(self):
         output_dir = self.output_dir / "new" / "releases"
-        with patch.object(saver, "fetch_releases", return_value=[]):
-            self.assertEqual(saver.main("navidrome/navidrome", output_dir=output_dir), 0)
-        self.assertTrue(output_dir.is_dir())
-        self.assertEqual(list(output_dir.iterdir()), [])
+        with patch.object(saver, "fetch_releases") as fetch:
+            self.assertEqual(saver.main("navidrome/navidrome", output_dir=output_dir), 1)
+            fetch.assert_not_called()
+        self.assertFalse(output_dir.parent.exists())
+        self.assertIn("Output directory must be an existing directory", self.stderr.getvalue())
 
     def test_invalid_arguments_are_rejected_before_fetching(self):
         with patch.object(saver, "fetch_releases") as fetch:
@@ -160,6 +165,8 @@ class SaveGitHubReleasesTest(unittest.TestCase):
         with patch.object(saver, "fetch_releases") as fetch:
             self.assertEqual(saver.main("navidrome/navidrome", output_dir=output_file), 1)
             fetch.assert_not_called()
+        self.assertTrue(output_file.is_file())
+        self.assertIn("Output directory must be an existing directory", self.stderr.getvalue())
 
     def test_first_page_request_and_optional_authentication(self):
         items = [release()]
