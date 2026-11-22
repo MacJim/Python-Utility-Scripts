@@ -1,42 +1,74 @@
 import argparse
 import os
+import re
+import shutil
+import tempfile
 
 
-# TODO: Also list files in sub-directories.
+def _natural_sort_key(filename: str):
+    return [int(part) if part.isdecimal() else part for part in re.split(r"(\d+)", filename)], filename
 
 
-def main(working_dir: str, extensions_filter: list[str] | None, drop_extension: bool):
+def _save_filenames(output_filename: str, filenames: list[str]):
+    output_dir = os.path.dirname(os.path.abspath(output_filename))
+    temporary_file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=output_dir, delete=False)
+    try:
+        with temporary_file:
+            temporary_file.writelines(f"{filename}\n" for filename in filenames)
+        if os.path.exists(output_filename):
+            shutil.copyfile(output_filename, f"{output_filename}.old")
+        os.replace(temporary_file.name, output_filename)
+    finally:
+        if os.path.exists(temporary_file.name):
+            os.unlink(temporary_file.name)
+
+
+def main(working_dir: str, extensions_filter: list[str] | None = None, drop_extension: bool = False, output_filename: str | None = None, merge: bool = False):
+    if merge and output_filename is None:
+        raise ValueError("--merge requires --output.")
     if not os.path.isdir(working_dir):
         raise NotADirectoryError(f"`{working_dir}` isn't a dir.")
 
-    filenames = os.listdir(working_dir)
-
-    filenames = [f for f in filenames if os.path.isfile(os.path.join(working_dir, f))]
-    if extensions_filter:
-        old_filenames = filenames
-        filenames = []
-        for f in old_filenames:
-            for ext in extensions_filter:
-                if ext[0] != ".":
-                    ext = f".{ext}"
-                if os.path.splitext(f)[-1] == ext:
-                    filenames.append(f)
-                    break
-
-    filenames.sort()
-
-    for f in filenames:
+    extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions_filter or []]
+    extensions.sort(key=len, reverse=True)
+    filenames = set()
+    for filename in os.listdir(working_dir):
+        if not os.path.isfile(os.path.join(working_dir, filename)):
+            continue
+        extension = next((ext for ext in extensions if filename.lower().endswith(ext)), None)
+        if extensions and extension is None:
+            continue
         if drop_extension:
-            print(os.path.splitext(f)[0])
-        else:
-            print(f)
+            filename = filename[:-len(extension)] if extension else os.path.splitext(filename)[0]
+        filenames.add(filename)
+
+    if merge and os.path.exists(output_filename):
+        with open(output_filename, encoding="utf-8") as output:
+            filenames.update(output.read().splitlines())
+
+    sorted_filenames = sorted(filenames, key=_natural_sort_key)
+    if output_filename is not None:
+        _save_filenames(output_filename, sorted_filenames)
+    else:
+        for filename in sorted_filenames:
+            print(filename)
+
+
+def cli():
+    parser = argparse.ArgumentParser(description="List filenames in natural order, optionally saving them to a text file.")
+    parser.add_argument("dir_name", nargs="?", default=os.getcwd(), help="Source directory. Defaults to the current working dir (%(default)s).")
+    parser.add_argument("--extensions_filter", "-e", nargs="*", default=None, help="Accepted suffixes, ignoring case, with or without leading dots (e.g. jpg .png tar.gz). Default: all files.")
+    parser.add_argument("--drop_extension", "-d", action="store_true", help="Strip the matched extension when filtering, otherwise the final suffix.")
+    parser.add_argument("--output", "-o", help="Save to this file. Existing contents are backed up to FILE.old. Default: print to standard output.")
+    parser.add_argument("--merge", action="store_true", help="Keep existing output entries and add new names without duplicates. Requires --output.")
+    args = parser.parse_args()
+    if args.merge and args.output is None:
+        parser.error("--merge requires --output.")
+    try:
+        main(args.dir_name, args.extensions_filter, args.drop_extension, args.output, args.merge)
+    except (OSError, ValueError) as error:
+        parser.exit(1, f"{parser.prog}: {error}\n")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="List filenames.")
-    parser.add_argument("dir_name", nargs="?", default=os.getcwd(), help="The root directory name. Defaults to the current working dir (%(default)s).")
-    parser.add_argument("--extensions_filter", "-e", nargs="*", default=None, help="Filter files by extensions. Default: Allow all extensions.")
-    parser.add_argument("--drop_extension", "-d", action="store_true", help="If specified, drop file extensions from the output.")
-    args = parser.parse_args()
-
-    main(args.dir_name, args.extensions_filter, args.drop_extension)
+    cli()
