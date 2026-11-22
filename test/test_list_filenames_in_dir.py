@@ -158,7 +158,7 @@ class ListFilenamesInDirTest(unittest.TestCase):
     def test_cli_saves_and_merges_using_short_and_original_long_options(self):
         self.add_files("10.JPG", "1.jpg", "2.jpg")
         script = str(Path(listing.__file__).resolve())
-        for output_flag, extensions_flag, strip_flag in (("-o", "-e", "-d"), ("--output", "--extensions_filter", "--drop_extension")):
+        for output_flag, extensions_flag, strip_flag in (("-o", "-e", "-d"), ("--out_filename", "--extensions_filter", "--drop_extension"), ("--output", "-e", "-d")):
             with self.subTest(output_flag=output_flag):
                 self.output.write_bytes(b"gone.jpg\n")
                 result = subprocess.run(
@@ -171,14 +171,14 @@ class ListFilenamesInDirTest(unittest.TestCase):
                 self.assertEqual(self.backup.read_bytes(), b"gone.jpg\n")
 
     def test_merge_requires_output(self):
-        with self.assertRaisesRegex(ValueError, "--merge requires --output"):
+        with self.assertRaisesRegex(ValueError, "--merge requires --out_filename"):
             listing.main(str(self.source), merge=True)
         result = subprocess.run(
             [sys.executable, str(Path(listing.__file__).resolve()), str(self.source), "--merge"],
             capture_output=True, text=True, check=False,
         )
         self.assertEqual(result.returncode, 2)
-        self.assertIn("--merge requires --output", result.stderr)
+        self.assertIn("--merge requires --out_filename", result.stderr)
         self.assertFalse(self.output.exists())
 
 
