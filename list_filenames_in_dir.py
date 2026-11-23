@@ -19,6 +19,19 @@ import tempfile
 
 
 def _natural_sort_key(filename: str):
+    """
+    Split digit runs into integers & use the original filename to break ties.
+
+    Examples:
+        "README"       -> (["README"], "README")
+        "a.jpg"        -> (["a.jpg"], "a.jpg")
+        "a100.jpg"     -> (["a", 100, ".jpg"], "a100.jpg")
+        "a100b100.jpg" -> (["a", 100, "b", 100, ".jpg"], "a100b100.jpg")
+    These examples sort as:
+        README, a100.jpg, a100b100.jpg, a.jpg
+
+    Text comparisons are case-sensitive.
+    """
     return [int(part) if part.isdecimal() else part for part in re.split(r"(\d+)", filename)], filename
 
 
