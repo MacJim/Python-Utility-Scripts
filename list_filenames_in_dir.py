@@ -8,7 +8,7 @@
 #   Merge stripped names into an existing list:
 #       ./list_filenames_in_dir.py ./photos -e jpg png -o names.txt --merge -d
 #   Strip a compound extension:
-#       ./list_filenames_in_dir.py ./archives -e tar.gz -d --out_filename archives.txt
+#       ./list_filenames_in_dir.py ./archives -e tar.gz -d --out-filename archives.txt
 # Existing outputs are backed up to <output>.old before replacement.
 
 import argparse
@@ -38,7 +38,7 @@ def _save_filenames_cow(output_filename: str, filenames: list[str]):
 
 def main(working_dir: str, extensions_filter: list[str] | None = None, drop_extension: bool = False, output_filename: str | None = None, merge: bool = False):
     if merge and output_filename is None:
-        raise ValueError("--merge requires --out_filename (-o/--output).")
+        raise ValueError("--merge requires --out-filename (-o/--output).")
     if not os.path.isdir(working_dir):
         raise NotADirectoryError(f"`{working_dir}` isn't a dir.")
 
@@ -71,17 +71,17 @@ def cli():
     parser = argparse.ArgumentParser(description="List filenames in natural order, optionally saving them to a text file.")
 
     input_options = parser.add_argument_group("Input options")
-    input_options.add_argument("in_dir", nargs="?", default=os.getcwd(), help="Source directory. Defaults to the current working dir (%(default)s).")
-    input_options.add_argument("--extensions_filter", "-e", nargs="*", default=None, help="Accepted suffixes, ignoring case, with or without leading dots (e.g. jpg .png tar.gz). Default: all files.")
+    input_options.add_argument("in_dir", metavar="IN-DIR", nargs="?", default=os.getcwd(), help="Source directory. Defaults to the current working dir (%(default)s).")
+    input_options.add_argument("--extensions-filter", "-e", metavar="EXTENSION", nargs="*", default=None, help="Accepted suffixes, ignoring case, with or without leading dots (e.g. jpg .png tar.gz). Default: all files.")
 
     output_options = parser.add_argument_group("Output options")
-    output_options.add_argument("--out_filename", "--output", "-o", metavar="FILE", help="Save to this file. Existing contents are backed up to FILE.old. Default: print to standard output.")
-    output_options.add_argument("--merge", action="store_true", help="Keep existing output entries and add new names without duplicates. Requires --out_filename.")
-    output_options.add_argument("--drop_extension", "-d", action="store_true", help="Strip the matched extension(s) in the output.")
+    output_options.add_argument("--out-filename", "--output", "-o", metavar="FILE", help="Save to this file. Existing contents are backed up to FILE.old. Default: print to standard output.")
+    output_options.add_argument("--merge", action="store_true", help="Keep existing output entries and add new names without duplicates. Requires --out-filename.")
+    output_options.add_argument("--drop-extension", "-d", action="store_true", help="Strip the matched extension(s) in the output.")
 
     args = parser.parse_args()
     if args.merge and args.out_filename is None:
-        parser.error("--merge requires --out_filename (-o/--output).")
+        parser.error("--merge requires --out-filename (-o/--output).")
     try:
         main(args.in_dir, args.extensions_filter, args.drop_extension, args.out_filename, args.merge)
     except (OSError, ValueError) as error:
